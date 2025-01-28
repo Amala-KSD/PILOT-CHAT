@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { BiSend, BiPaperclip } from 'react-icons/bi';
 
-
 const ChatContainer = styled.div`
   flex: 1;
   display: flex;
@@ -106,19 +105,18 @@ const IconButton = styled.button`
   }
 `;
 
-const ChatArea = () => {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      text: "This AI chatbot has been developed to optimize communication and simplify work processes, ultimately leading to smoother operations.",
-      isUser: false
-    }
-  ]);
+const ChatArea = ({ activeChat }) => {
   const [newMessage, setNewMessage] = useState('');
 
   const handleSend = () => {
     if (newMessage.trim()) {
-      setMessages([...messages, { id: Date.now(), text: newMessage, isUser: true }]);
+      // Add user's message
+      activeChat.messages.push({ id: Date.now(), text: newMessage, isUser: true });
+
+      // Add bot's response immediately after user's message
+      activeChat.messages.push({ id: Date.now() + 1, text: 'hi', isUser: false });
+
+      // Reset the input field
       setNewMessage('');
     }
   };
@@ -126,16 +124,16 @@ const ChatArea = () => {
   return (
     <ChatContainer>
       <Header>
-        <Avatar>AI</Avatar>
+        <Avatar>G</Avatar>
         <HeaderInfo>
-          <h1>Welcome back,</h1>
-          <p>Suvigya</p>
+          <h1>{activeChat.title}</h1>
+          <p>{activeChat.messages.length} messages</p>
         </HeaderInfo>
       </Header>
       <MessagesArea>
-        {messages.map(message => (
+        {activeChat.messages.map(message => (
           <Message key={message.id} isUser={message.isUser}>
-            {!message.isUser && <Avatar>AI</Avatar>}
+            {!message.isUser && <Avatar>G</Avatar>}
             <MessageContent isUser={message.isUser}>
               {message.text}
             </MessageContent>

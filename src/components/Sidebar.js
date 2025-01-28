@@ -76,35 +76,34 @@ const ConversationTitle = styled.h3`
   font-weight: 500;
   margin: 0;
   color: #ffffff;
-  display: none;
-  
-  ${SidebarContainer}:hover & {
-    display: block;
-  }
+  display: ${(props) => (props.isEditing ? 'none' : 'block')};
 `;
 
-const MessageCount = styled.span`
-  font-size: 14px;
-  color: #888;
-  display: none;
-  
-  ${SidebarContainer}:hover & {
-    display: block;
-  }
+const TitleInput = styled.input`
+  font-size: 16px;
+  font-weight: 500;
+  color: #ffffff;
+  background: transparent;
+  border: none;
+  width: 100%;
+  outline: none;
+  padding: 0;
 `;
 
-const Sidebar = () => {
-  const [conversations, setConversations] = useState([
-    { id: 1, title: 'First Conversation', messages: 1 }
-  ]);
+const Sidebar = ({ conversations, handleNewChat, handleChangeActiveChat, handleEditTitle }) => {
+  const [editingTitleId, setEditingTitleId] = useState(null); // Track the chat that's being edited
+  const [newTitle, setNewTitle] = useState('');
 
-  const handleNewChat = () => {
-    const newChat = {
-      id: Date.now(),
-      title: `New Chat ${conversations.length + 1}`,
-      messages: 0
-    };
-    setConversations([newChat, ...conversations]);
+  const handleTitleClick = (chat) => {
+    setEditingTitleId(chat.id); // Set the chat being edited
+    setNewTitle(chat.title); // Set the title to the current title of the chat
+  };
+
+  const handleBlur = (chat) => {
+    if (newTitle.trim()) {
+      handleEditTitle(chat.id, newTitle); // Update the title of the chat
+    }
+    setEditingTitleId(null); // Exit editing mode
   };
 
   return (
@@ -115,14 +114,19 @@ const Sidebar = () => {
       </NewChatButton>
 
       <ConversationList>
-        {conversations.map(chat => (
-          <Conversation key={chat.id}>
-            <ConversationTitle>
-              {chat.title}
-            </ConversationTitle>
-            <MessageCount>
-              {chat.messages} messages
-            </MessageCount>
+        {conversations.map((chat) => (
+          <Conversation key={chat.id} onClick={() => handleChangeActiveChat(chat)}>
+            {editingTitleId === chat.id ? (
+              <TitleInput
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)} // Update title as user types
+                onBlur={() => handleBlur(chat)} // Save title when input loses focus
+                onKeyPress={(e) => e.key === 'Enter' && handleBlur(chat)} // Save title on pressing Enter
+                autoFocus
+              />
+            ) : (
+              <ConversationTitle onClick={() => handleTitleClick(chat)}>{chat.title}</ConversationTitle>
+            )}
           </Conversation>
         ))}
       </ConversationList>
