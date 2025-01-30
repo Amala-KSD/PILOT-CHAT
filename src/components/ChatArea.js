@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { BiSend, BiPaperclip } from 'react-icons/bi';
+import logoKSD from './logoKSD.png'; 
 
 const ChatContainer = styled.div`
   flex: 1;
@@ -105,6 +106,12 @@ const IconButton = styled.button`
   }
 `;
 
+const Logo = styled.img`
+  height: 40px;
+  width: auto;
+  margin-left: auto;
+`;
+
 const ChatArea = ({ activeChat }) => {
   const [newMessage, setNewMessage] = useState('');
 
@@ -124,11 +131,13 @@ const ChatArea = ({ activeChat }) => {
   return (
     <ChatContainer>
       <Header>
+      
         <Avatar>G</Avatar>
         <HeaderInfo>
           <h1>{activeChat.title}</h1>
           <p>{activeChat.messages.length} messages</p>
         </HeaderInfo>
+        <Logo src={logoKSD} alt="Logo" />
       </Header>
       <MessagesArea>
         {activeChat.messages.map(message => (

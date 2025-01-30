@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { BiMessageSquareAdd } from 'react-icons/bi';
 
 const SidebarContainer = styled.div`
-  width: 80px;
+  width: ${(props) => (props.isExpanded ? '280px' : '80px')};
   height: 100vh;
   background: #000000;
   padding: 16px;
@@ -11,10 +11,6 @@ const SidebarContainer = styled.div`
   transition: width 0.3s ease;
   position: relative;
   overflow: hidden;
-
-  &:hover {
-    width: 280px;
-  }
 `;
 
 const NewChatButton = styled.button`
@@ -34,15 +30,8 @@ const NewChatButton = styled.button`
   transition: all 0.2s;
   white-space: nowrap;
 
-  ${SidebarContainer}:hover & {
-    justify-content: flex-start;
-  }
-
   span {
-    display: none;
-    ${SidebarContainer}:hover & {
-      display: block;
-    }
+    display: ${(props) => (props.isExpanded ? 'block' : 'none')};
   }
 
   &:hover {
@@ -76,7 +65,7 @@ const ConversationTitle = styled.h3`
   font-weight: 500;
   margin: 0;
   color: #ffffff;
-  display: ${(props) => (props.isEditing ? 'none' : 'block')};
+  display: ${(props) => (props.isExpanded ? 'block' : 'none')};
 `;
 
 const TitleInput = styled.input`
@@ -90,28 +79,72 @@ const TitleInput = styled.input`
   padding: 0;
 `;
 
+const HintText = styled.p`
+  font-size: 12px;
+  color: #888;
+  margin: 0;
+  display: ${(props) => (props.isExpanded ? 'block' : 'none')};
+`;
+const ConversationTitleContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const ModelSelect = styled.select`
+  width: 100%;
+  padding: 12px;
+  background: #000; /* Black background */
+  color: #fff; /* White text */
+  border: 1px solid #333; /* Slight border */
+  border-radius: 8px;
+  font-size: 16px;
+  margin-top: 12px;
+  cursor: pointer;
+  display: ${(props) => (props.isExpanded ? 'block' : 'none')};
+
+
+  &:focus {
+    outline: none;
+    border-color: #666;
+  }
+`;
+
+
 const Sidebar = ({ conversations, handleNewChat, handleChangeActiveChat, handleEditTitle }) => {
-  const [editingTitleId, setEditingTitleId] = useState(null); // Track the chat that's being edited
+  const [selectedModel, setSelectedModel] = useState('Gemini 1.5 Pro');
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [editingTitleId, setEditingTitleId] = useState(null);
   const [newTitle, setNewTitle] = useState('');
 
   const handleTitleClick = (chat) => {
-    setEditingTitleId(chat.id); // Set the chat being edited
-    setNewTitle(chat.title); // Set the title to the current title of the chat
+    setEditingTitleId(chat.id);
+    setNewTitle(chat.title);
   };
 
   const handleBlur = (chat) => {
     if (newTitle.trim()) {
-      handleEditTitle(chat.id, newTitle); // Update the title of the chat
+      handleEditTitle(chat.id, newTitle);
     }
-    setEditingTitleId(null); // Exit editing mode
+    setEditingTitleId(null);
   };
 
   return (
-    <SidebarContainer>
-      <NewChatButton onClick={handleNewChat}>
+    <SidebarContainer
+      isExpanded={isExpanded}
+      onMouseEnter={() => setIsExpanded(true)}
+      onMouseLeave={() => setIsExpanded(false)}
+    >
+      <NewChatButton isExpanded={isExpanded} onClick={handleNewChat}>
         <BiMessageSquareAdd size={20} />
         <span>New Chat</span>
       </NewChatButton>
+
+            
+      <ModelSelect value={selectedModel} isExpanded={isExpanded} onChange={(e) => setSelectedModel(e.target.value)}>
+        <option value="Gemini 1.5 Pro">Gemini 1.5 Pro</option>
+        <option value="GPT 4.0">GPT 4.0</option>
+      </ModelSelect>
 
       <ConversationList>
         {conversations.map((chat) => (
@@ -119,13 +152,19 @@ const Sidebar = ({ conversations, handleNewChat, handleChangeActiveChat, handleE
             {editingTitleId === chat.id ? (
               <TitleInput
                 value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)} // Update title as user types
-                onBlur={() => handleBlur(chat)} // Save title when input loses focus
-                onKeyPress={(e) => e.key === 'Enter' && handleBlur(chat)} // Save title on pressing Enter
+                onChange={(e) => setNewTitle(e.target.value)}
+                onBlur={() => handleBlur(chat)}
+                onKeyPress={(e) => e.key === 'Enter' && handleBlur(chat)}
                 autoFocus
               />
             ) : (
-              <ConversationTitle onClick={() => handleTitleClick(chat)}>{chat.title}</ConversationTitle>
+              <ConversationTitleContainer>
+              <ConversationTitle isExpanded={isExpanded} onClick={() => handleTitleClick(chat)}>
+                {chat.title}
+              </ConversationTitle>
+              <HintText isExpanded={isExpanded}>Tap title to edit it</HintText>
+            </ConversationTitleContainer>
+
             )}
           </Conversation>
         ))}
