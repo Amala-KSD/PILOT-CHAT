@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { BiSend, BiPaperclip } from 'react-icons/bi';
-import logoKSD from './logoKSD.png'; 
+import { signOut } from 'firebase/auth'; // Import signOut from Firebase auth
+import logoKSD from './logoKSD.png';
 
 const ChatContainer = styled.div`
   flex: 1;
@@ -16,6 +17,7 @@ const Header = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
+  position: relative; /* Added to position the sign-out button */
 `;
 
 const Avatar = styled.div`
@@ -26,6 +28,44 @@ const Avatar = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  position: relative; /* Ensure the sign-out button aligns properly */
+`;
+
+const SignInButton = styled.div`
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(50%);
+  background: #444;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 10;
+
+  &:hover {
+    background: #555;
+  }
+`;
+
+const SignOutButton = styled.div`
+  position: absolute;
+  top: 12px; 
+  left: 50%;
+  transform: translateX(50%);
+  background: #444;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 10;
+
+  &:hover {
+    background: #555;
+  }
 `;
 
 const HeaderInfo = styled.div`
@@ -112,8 +152,10 @@ const Logo = styled.img`
   margin-left: auto;
 `;
 
-const ChatArea = ({ activeChat }) => {
+const ChatArea = ({ activeChat, user, handleSignOut, handleSignIn }) => {
   const [newMessage, setNewMessage] = useState('');
+  const [showSignOut, setShowSignOut] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false); // State to toggle sign-in button
 
   const handleSend = () => {
     if (newMessage.trim()) {
@@ -128,17 +170,51 @@ const ChatArea = ({ activeChat }) => {
     }
   };
 
+  const handleAvatarClick = () => {
+    if (user) {
+      setShowSignOut(prevState => !prevState); // Toggle sign-out button visibility
+    } else {
+      setShowSignIn(true); // Show sign-in button if no user
+    }
+  };
+
   return (
     <ChatContainer>
       <Header>
-      
-        <Avatar>G</Avatar>
+        {/* Display profile picture if user is logged in, else show 'G' for guest */}
+        <Avatar onClick={handleAvatarClick}>
+          {user ? (
+            <img src={user.photoURL} alt="Profile" style={{ width: '100%', borderRadius: '50%' }} />
+          ) : (
+            'G'
+          )}
+        </Avatar>
+
+        {/* Show Sign-In button if the user is a guest */}
+        {showSignIn && !user && (
+          <SignInButton onClick={handleSignIn}>
+            Sign In
+          </SignInButton>
+        )}
+
+        {/* Show the sign-out button if avatar is clicked and the user is signed in */}
+        {showSignOut && user && (
+          <SignOutButton onClick={() => {
+            handleSignOut(); 
+            setShowSignOut(false); // Hide sign-out button
+          }}>
+            Sign Out
+          </SignOutButton>
+        )}
+
         <HeaderInfo>
           <h1>{activeChat.title}</h1>
           <p>{activeChat.messages.length} messages</p>
         </HeaderInfo>
+
         <Logo src={logoKSD} alt="Logo" />
       </Header>
+
       <MessagesArea>
         {activeChat.messages.map(message => (
           <Message key={message.id} isUser={message.isUser}>
@@ -149,6 +225,7 @@ const ChatArea = ({ activeChat }) => {
           </Message>
         ))}
       </MessagesArea>
+
       <InputArea>
         <IconButton>
           <BiPaperclip />

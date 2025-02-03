@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
+import { auth, googleProvider, signInWithPopup, signInAnonymously, signOut } from './Firebase';
 
 const AppContainer = styled.div`
   display: flex;
@@ -80,6 +81,41 @@ function App() {
   ]);
   const [activeChat, setActiveChat] = useState(conversations[0]);
   const [showPopup, setShowPopup] = useState(true); // Controls popup visibility
+  const [user, setUser] = useState(null); // Store logged-in user
+  const [showSignOut, setShowSignOut] = useState(false); // Controls showing sign out option
+
+  // Handle Google Sign-In
+  const handleGoogleSignIn = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      setUser(result.user);
+      setShowPopup(false); // Close popup after login
+    } catch (error) {
+      console.error("Google Sign-In Error:", error);
+    }
+  };
+
+  // Handle Guest Login
+  const handleGuestLogin = async () => {
+    try {
+      const result = await signInAnonymously(auth);
+      setUser({ displayName: "Guest", email: "guest@anonymous.com" });
+      setShowPopup(false); // Close popup after login
+    } catch (error) {
+      console.error("Guest Login Error:", error);
+    }
+  };
+
+  // Handle Sign-Out
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+      setShowSignOut(false); // Hide sign out option after sign out
+    } catch (error) {
+      console.error("Sign Out Error:", error);
+    }
+  };
 
   const handleNewChat = () => {
     const newChat = {
@@ -114,12 +150,12 @@ function App() {
             <PopupText>
               This product belongs to KSDAdvisory, and the models used might produce inaccurate information.
             </PopupText>
-            <GoogleButton onClick={() => setShowPopup(false)}>Sign in with Google</GoogleButton>
-            <GuestButton onClick={() => setShowPopup(false)}>Sign in as Guest for now</GuestButton>
+            <GoogleButton onClick={handleGoogleSignIn}>Sign in with Google</GoogleButton>
+            <GuestButton onClick={handleGuestLogin}>Sign in as Guest for now</GuestButton>
           </Popup>
         </Overlay>
       )}
-      
+
       <AppContainer>
         <Sidebar
           conversations={conversations}
@@ -127,7 +163,7 @@ function App() {
           handleChangeActiveChat={handleChangeActiveChat}
           handleEditTitle={handleEditTitle}
         />
-        <ChatArea activeChat={activeChat} />
+        <ChatArea activeChat={activeChat} user={user} handleSignOut={handleSignOut} showSignOut={showSignOut} setShowSignOut={setShowSignOut} />
       </AppContainer>
     </>
   );
