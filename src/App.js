@@ -99,7 +99,7 @@ function App() {
   const handleGuestLogin = async () => {
     try {
       const result = await signInAnonymously(auth);
-      setUser({ displayName: "Guest", email: "guest@anonymous.com" });
+      setUser(null);
       setShowPopup(false); // Close popup after login
     } catch (error) {
       console.error("Guest Login Error:", error);

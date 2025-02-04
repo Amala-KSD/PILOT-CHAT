@@ -178,6 +178,14 @@ const ChatArea = ({ activeChat, user, handleSignOut, handleSignIn }) => {
     }
   };
 
+  const handleSignOutConfirmation = () => {
+    const confirmation = window.confirm("Are you sure you want to sign out?");
+    if (confirmation) {
+      handleSignOut(); // Proceed with sign out
+      setShowSignOut(false); // Hide sign-out button
+    }
+  };
+
   return (
     <ChatContainer>
       <Header>
@@ -199,10 +207,7 @@ const ChatArea = ({ activeChat, user, handleSignOut, handleSignIn }) => {
 
         {/* Show the sign-out button if avatar is clicked and the user is signed in */}
         {showSignOut && user && (
-          <SignOutButton onClick={() => {
-            handleSignOut(); 
-            setShowSignOut(false); // Hide sign-out button
-          }}>
+          <SignOutButton onClick={handleSignOutConfirmation}>
             Sign Out
           </SignOutButton>
         )}
