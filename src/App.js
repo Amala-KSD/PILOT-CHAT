@@ -90,6 +90,7 @@ function App() {
       const result = await signInWithPopup(auth, googleProvider);
       setUser(result.user);
       setShowPopup(false); // Close popup after login
+      console.log("Sign in with Google successful");
     } catch (error) {
       console.error("Google Sign-In Error:", error);
     }
@@ -112,6 +113,7 @@ function App() {
       await signOut(auth);
       setUser(null);
       setShowSignOut(false); // Hide sign out option after sign out
+      console.log("Sign out succesful");
     } catch (error) {
       console.error("Sign Out Error:", error);
     }

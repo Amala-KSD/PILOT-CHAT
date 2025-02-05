@@ -217,6 +217,8 @@ const GuestButton = styled(Button)`
 `;
 
 
+
+
 const ChatArea = ({ activeChat, user, setUser, handleSignOut }) => {
   const [newMessage, setNewMessage] = useState('');
   const [showSignOut, setShowSignOut] = useState(false);
