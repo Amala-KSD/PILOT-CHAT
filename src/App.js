@@ -163,7 +163,7 @@ function App() {
           handleChangeActiveChat={handleChangeActiveChat}
           handleEditTitle={handleEditTitle}
         />
-        <ChatArea activeChat={activeChat} user={user} handleSignOut={handleSignOut} showSignOut={showSignOut} setShowSignOut={setShowSignOut} />
+        <ChatArea activeChat={activeChat} user={user} setUser={setUser} handleSignOut={handleSignOut} showSignOut={showSignOut} setShowSignOut={setShowSignOut}  />
       </AppContainer>
     </>
   );

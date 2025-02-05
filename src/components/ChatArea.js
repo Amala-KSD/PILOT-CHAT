@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { BiSend, BiPaperclip } from 'react-icons/bi';
-import { signOut } from 'firebase/auth'; // Import signOut from Firebase auth
+import { getAuth, GoogleAuthProvider, signInWithPopup ,signOut } from 'firebase/auth'; // Import signOut from Firebase auth
 import logoKSD from './logoKSD.png';
+
+//current
 
 const ChatContainer = styled.div`
   flex: 1;
@@ -151,11 +153,75 @@ const Logo = styled.img`
   width: auto;
   margin-left: auto;
 `;
+const Overlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
 
-const ChatArea = ({ activeChat, user, handleSignOut, handleSignIn }) => {
+const Popup = styled.div`
+  background: #1e1e1e;
+  padding: 30px;
+  border-radius: 12px;
+  text-align: center;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+`;
+
+const PopupTitle = styled.h2`
+  color: #ffffff;
+  margin-bottom: 16px;
+`;
+
+const PopupText = styled.p`
+  color: #aaaaaa;
+  font-size: 14px;
+  margin-bottom: 20px;
+`;
+
+const Button = styled.button`
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: background 0.2s;
+`;
+
+const GoogleButton = styled(Button)`
+  background: #4285F4;
+  color: #ffffff;
+
+  &:hover {
+    background: #357ae8;
+  }
+`;
+
+const GuestButton = styled(Button)`
+  background: #444;
+  color: #ffffff;
+
+  &:hover {
+    background: #666;
+  }
+`;
+
+
+const ChatArea = ({ activeChat, user, setUser, handleSignOut }) => {
   const [newMessage, setNewMessage] = useState('');
   const [showSignOut, setShowSignOut] = useState(false);
-  const [showSignIn, setShowSignIn] = useState(false); // State to toggle sign-in button
+  const [showSignIn, setShowSignIn] = useState(false); // State to toggle sign-in button initially
+  const [showSignInOptions, setShowSignInOptions] = useState(false); // Show sign-in options for guest users
 
   const handleSend = () => {
     if (newMessage.trim()) {
@@ -174,7 +240,7 @@ const ChatArea = ({ activeChat, user, handleSignOut, handleSignIn }) => {
     if (user) {
       setShowSignOut(prevState => !prevState); // Toggle sign-out button visibility
     } else {
-      setShowSignIn(true); // Show sign-in button if no user
+      setShowSignInOptions(true); // Show sign-in options if the user is a guest
     }
   };
 
@@ -185,6 +251,25 @@ const ChatArea = ({ activeChat, user, handleSignOut, handleSignIn }) => {
       setShowSignOut(false); // Hide sign-out button
     }
   };
+
+  const handleGoogleSignIn = async () => {
+    const auth = getAuth();
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      // Update user info with Google data
+      setUser(result.user);
+      setShowSignInOptions(false); // Close popup after Google sign-in
+    } catch (error) {
+      console.error("Google Sign-In Error:", error);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    setUser(null); // Keep as guest
+    setShowSignInOptions(false); // Close popup after choosing guest login
+  };
+
 
   return (
     <ChatContainer>
@@ -199,11 +284,16 @@ const ChatArea = ({ activeChat, user, handleSignOut, handleSignIn }) => {
         </Avatar>
 
         {/* Show Sign-In button if the user is a guest */}
-        {showSignIn && !user && (
-          <SignInButton onClick={handleSignIn}>
-            Sign In
-          </SignInButton>
-        )}
+        {showSignInOptions && !user && (
+          <Overlay>
+          <Popup>
+            <PopupTitle>Sign In</PopupTitle>
+            <PopupText>Choose your sign-in method:</PopupText>
+            <GoogleButton onClick={handleGoogleSignIn}>Sign in with Google</GoogleButton>
+            <GuestButton onClick={handleGuestLogin}>Continue as Guest</GuestButton>
+          </Popup>
+        </Overlay>
+      )}
 
         {/* Show the sign-out button if avatar is clicked and the user is signed in */}
         {showSignOut && user && (
