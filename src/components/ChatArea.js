@@ -3,6 +3,10 @@ import styled from 'styled-components';
 import { BiSend, BiPaperclip } from 'react-icons/bi';
 import { getAuth, GoogleAuthProvider, signInWithPopup ,signOut } from 'firebase/auth'; // Import signOut from Firebase auth
 import logoKSD from './logoKSD.png';
+import { db } from '../Firebase';
+import {collection, addDoc, serverTimestamp } from 'firebase/firestore';
+
+
 
 //current
 
@@ -217,26 +221,53 @@ const GuestButton = styled(Button)`
 `;
 
 
-
-
 const ChatArea = ({ activeChat, user, setUser, handleSignOut }) => {
   const [newMessage, setNewMessage] = useState('');
   const [showSignOut, setShowSignOut] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false); // State to toggle sign-in button initially
   const [showSignInOptions, setShowSignInOptions] = useState(false); // Show sign-in options for guest users
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (newMessage.trim()) {
-      // Add user's message
-      activeChat.messages.push({ id: Date.now(), text: newMessage, isUser: true });
-
-      // Add bot's response immediately after user's message
-      activeChat.messages.push({ id: Date.now() + 1, text: 'hi', isUser: false });
-
-      // Reset the input field
-      setNewMessage('');
+      const userMessage = { 
+        id: Date.now(), 
+        text: newMessage, 
+        isUser: true 
+      };
+  
+      const botMessage = { 
+        id: Date.now() + 1, 
+        text: "hi", 
+        isUser: false 
+      };
+  
+      // Add messages to UI state
+      activeChat.messages.push(userMessage);
+      activeChat.messages.push(botMessage);
+      setNewMessage("");
+  
+      // Store messages in Firestore if user is signed in
+      if (user) {
+        try {
+          const chatRef = collection(db, "chats", user.uid, "messages");
+          await addDoc(chatRef, {
+            text: newMessage,
+            isUser: true,
+            timestamp: serverTimestamp()
+          });
+  
+          await addDoc(chatRef, {
+            text: "hi",
+            isUser: false,
+            timestamp: serverTimestamp()
+          });
+        } catch (error) {
+          console.error("Error sending message:", error);
+        }
+      }
     }
   };
+  
 
   const handleAvatarClick = () => {
     if (user) {

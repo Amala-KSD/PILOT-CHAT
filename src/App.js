@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
+import { db } from './Firebase';
 import { auth, googleProvider, signInWithPopup, signInAnonymously, signOut } from './Firebase';
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 
 const AppContainer = styled.div`
   display: flex;
@@ -83,6 +86,40 @@ function App() {
   const [showPopup, setShowPopup] = useState(true); // Controls popup visibility
   const [user, setUser] = useState(null); // Store logged-in user
   const [showSignOut, setShowSignOut] = useState(false); // Controls showing sign out option
+
+
+    // 🔹 Listen for authentication state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      if (authUser) {
+        setUser(authUser);
+        fetchUserChats(authUser.uid); // Fetch chats for logged-in user
+        setShowPopup(false);
+      } else {
+        setUser(null);
+        setConversations([]); // Clear chats on logout
+      }
+    });
+
+    return () => unsubscribe(); // Cleanup listener
+  }, []);
+
+  // 🔹 Fetch user chats from Firestore
+  const fetchUserChats = (userId) => {
+    const userChatRef = collection(db, "users", userId, "chats");
+    const q = query(userChatRef, orderBy("timestamp", "asc"));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const messages = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setConversations([{ id: 1, title: "Chat", messages }]);
+      setActiveChat({ id: 1, title: "Chat", messages });
+    });
+
+    return unsubscribe;
+  };
 
   // Handle Google Sign-In
   const handleGoogleSignIn = async () => {
