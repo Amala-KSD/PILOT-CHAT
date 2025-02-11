@@ -249,7 +249,7 @@ const ChatArea = ({ activeChat, user, setUser, handleSignOut }) => {
       // Store messages in Firestore if user is signed in
       if (user) {
         try {
-          const chatRef = collection(db, "chats", user.uid, "messages");
+          const chatRef = collection(db, "users", user.uid, "chats",activeChat.id.toString(), "messages");
           await addDoc(chatRef, {
             text: newMessage,
             isUser: true,
