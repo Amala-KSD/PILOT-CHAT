@@ -15,6 +15,7 @@ const ChatContainer = styled.div`
   display: flex;
   flex-direction: column;
   background: #000000;
+  
 `;
 
 const Header = styled.div`
@@ -156,6 +157,13 @@ const Logo = styled.img`
   height: 40px;
   width: auto;
   margin-left: auto;
+
+  @media (max-width: 500px) {
+    height: 35px;
+    width: auto;
+    margin-left: 55px;
+  }
+
 `;
 const Overlay = styled.div`
   position: fixed;

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import styled from 'styled-components';
-import { BiMessageSquareAdd } from 'react-icons/bi';
+import React, { useState } from "react";
+import styled from "styled-components";
+import { BiMessageSquareAdd } from "react-icons/bi";
+import DropDownModel from "./CustomDropdown";
 
 const SidebarContainer = styled.div`
-  width: ${(props) => (props.isExpanded ? '280px' : '80px')};
+  width: ${(props) => (props.isExpanded ? "280px" : "80px")};
   height: 100vh;
   background: #000000;
   padding: 16px;
@@ -11,6 +12,12 @@ const SidebarContainer = styled.div`
   transition: width 0.3s ease;
   position: relative;
   overflow: hidden;
+
+  @media (max-width: 500px) {
+    overflow: visible;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
 `;
 
 const NewChatButton = styled.button`
@@ -31,7 +38,7 @@ const NewChatButton = styled.button`
   white-space: nowrap;
 
   span {
-    display: ${(props) => (props.isExpanded ? 'block' : 'none')};
+    display: ${(props) => (props.isExpanded ? "block" : "none")};
   }
 
   &:hover {
@@ -65,7 +72,7 @@ const ConversationTitle = styled.h3`
   font-weight: 500;
   margin: 0;
   color: #ffffff;
-  display: ${(props) => (props.isExpanded ? 'block' : 'none')};
+  display: ${(props) => (props.isExpanded ? "block" : "none")};
 `;
 
 const TitleInput = styled.input`
@@ -83,7 +90,7 @@ const HintText = styled.p`
   font-size: 12px;
   color: #888;
   margin: 0;
-  display: ${(props) => (props.isExpanded ? 'block' : 'none')};
+  display: ${(props) => (props.isExpanded ? "block" : "none")};
 `;
 const ConversationTitleContainer = styled.div`
   display: flex;
@@ -101,21 +108,26 @@ const ModelSelect = styled.select`
   font-size: 16px;
   margin-top: 12px;
   cursor: pointer;
-  display: ${(props) => (props.isExpanded ? 'block' : 'none')};
-
+  display: ${(props) => (props.isExpanded ? "block" : "none")};
 
   &:focus {
     outline: none;
     border-color: #666;
   }
+
+  }
 `;
 
-
-const Sidebar = ({ conversations, handleNewChat, handleChangeActiveChat, handleEditTitle }) => {
-  const [selectedModel, setSelectedModel] = useState('Gemini 1.5 Pro');
+const Sidebar = ({
+  conversations,
+  handleNewChat,
+  handleChangeActiveChat,
+  handleEditTitle,
+}) => {
+  const [selectedModel, setSelectedModel] = useState("Gemini 1.5 Pro");
   const [isExpanded, setIsExpanded] = useState(false);
   const [editingTitleId, setEditingTitleId] = useState(null);
-  const [newTitle, setNewTitle] = useState('');
+  const [newTitle, setNewTitle] = useState("");
 
   const handleTitleClick = (chat) => {
     setEditingTitleId(chat.id);
@@ -140,31 +152,43 @@ const Sidebar = ({ conversations, handleNewChat, handleChangeActiveChat, handleE
         <span>New Chat</span>
       </NewChatButton>
 
-            
-      <ModelSelect value={selectedModel} isExpanded={isExpanded} onChange={(e) => setSelectedModel(e.target.value)}>
+      {/* <ModelSelect
+        value={selectedModel}
+        isExpanded={isExpanded}
+        onChange={(e) => setSelectedModel(e.target.value)}
+      >
         <option value="Gemini 1.5 Pro">Gemini 1.5 Pro</option>
         <option value="GPT 4.0">GPT 4.0</option>
-      </ModelSelect>
+      </ModelSelect> */}
+
+      <DropDownModel isExpanded={isExpanded} />
 
       <ConversationList>
         {conversations.map((chat) => (
-          <Conversation key={chat.id} onClick={() => handleChangeActiveChat(chat)}>
+          <Conversation
+            key={chat.id}
+            onClick={() => handleChangeActiveChat(chat)}
+          >
             {editingTitleId === chat.id ? (
               <TitleInput
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 onBlur={() => handleBlur(chat)}
-                onKeyPress={(e) => e.key === 'Enter' && handleBlur(chat)}
+                onKeyPress={(e) => e.key === "Enter" && handleBlur(chat)}
                 autoFocus
               />
             ) : (
               <ConversationTitleContainer>
-              <ConversationTitle isExpanded={isExpanded} onClick={() => handleTitleClick(chat)}>
-                {chat.title}
-              </ConversationTitle>
-              <HintText isExpanded={isExpanded}>Tap title to edit it</HintText>
-            </ConversationTitleContainer>
-
+                <ConversationTitle
+                  isExpanded={isExpanded}
+                  onClick={() => handleTitleClick(chat)}
+                >
+                  {chat.title}
+                </ConversationTitle>
+                <HintText isExpanded={isExpanded}>
+                  Tap title to edit it
+                </HintText>
+              </ConversationTitleContainer>
             )}
           </Conversation>
         ))}
