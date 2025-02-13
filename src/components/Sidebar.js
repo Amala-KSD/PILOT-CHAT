@@ -1,7 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { BiMessageSquareAdd } from "react-icons/bi";
 import DropDownModel from "./CustomDropdown";
+import { db } from '../Firebase'; // Import Firestore instance
+import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
+
 
 const SidebarContainer = styled.div`
   width: ${(props) => (props.isExpanded ? "280px" : "80px")};
@@ -98,33 +101,17 @@ const ConversationTitleContainer = styled.div`
   gap: 4px;
 `;
 
-const ModelSelect = styled.select`
-  width: 100%;
-  padding: 12px;
-  background: #000; /* Black background */
-  color: #fff; /* White text */
-  border: 1px solid #333; /* Slight border */
-  border-radius: 8px;
-  font-size: 16px;
-  margin-top: 12px;
-  cursor: pointer;
-  display: ${(props) => (props.isExpanded ? "block" : "none")};
 
-  &:focus {
-    outline: none;
-    border-color: #666;
-  }
-
-  }
-`;
 
 const Sidebar = ({
+  user,
   conversations,
+  setConversations,
   handleNewChat,
   handleChangeActiveChat,
   handleEditTitle,
 }) => {
-  const [selectedModel, setSelectedModel] = useState("Gemini 1.5 Pro");
+  
   const [isExpanded, setIsExpanded] = useState(false);
   const [editingTitleId, setEditingTitleId] = useState(null);
   const [newTitle, setNewTitle] = useState("");
@@ -141,6 +128,25 @@ const Sidebar = ({
     setEditingTitleId(null);
   };
 
+  // In Sidebar.js (update useEffect to read title)
+  useEffect(() => {
+    if (!user) return;
+
+    const chatsRef = collection(db, 'users', user.uid, 'chats');
+    const unsubscribe = onSnapshot(chatsRef, (snapshot) => {
+      const chatList = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        title: doc.data().title || `Chat ${doc.id}`
+      }));
+      setConversations(chatList);
+    }, (error) => {
+      console.error('Failed to fetch chats:', error);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+  
+
   return (
     <SidebarContainer
       isExpanded={isExpanded}
@@ -152,14 +158,6 @@ const Sidebar = ({
         <span>New Chat</span>
       </NewChatButton>
 
-      {/* <ModelSelect
-        value={selectedModel}
-        isExpanded={isExpanded}
-        onChange={(e) => setSelectedModel(e.target.value)}
-      >
-        <option value="Gemini 1.5 Pro">Gemini 1.5 Pro</option>
-        <option value="GPT 4.0">GPT 4.0</option>
-      </ModelSelect> */}
 
       <DropDownModel isExpanded={isExpanded} />
 

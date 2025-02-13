@@ -4,7 +4,7 @@ import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import { db } from './Firebase';
 import { auth, googleProvider, signInWithPopup, signInAnonymously, signOut } from './Firebase';
-import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, addDoc, doc, updateDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
 const AppContainer = styled.div`
@@ -93,7 +93,6 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
       if (authUser) {
         setUser(authUser);
-        fetchUserChats(authUser.uid); // Fetch chats for logged-in user
         setShowPopup(false);
       } else {
         setUser(null);
@@ -104,22 +103,7 @@ function App() {
     return () => unsubscribe(); // Cleanup listener
   }, []);
 
-  // 🔹 Fetch user chats from Firestore
-  const fetchUserChats = (userId) => {
-    const userChatRef = collection(db, "users", userId, "chats");
-    const q = query(userChatRef, orderBy("timestamp", "asc"));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const messages = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setConversations([{ id: 1, title: "Chat", messages }]);
-      setActiveChat({ id: 1, title: "Chat", messages });
-    });
-
-    return unsubscribe;
-  };
 
   // Handle Google Sign-In
   const handleGoogleSignIn = async () => {
@@ -156,29 +140,43 @@ function App() {
     }
   };
 
-  const handleNewChat = () => {
-    const newChat = {
-      id: Date.now(),
-      title: `New Chat ${conversations.length + 1}`,
-      messages: []
-    };
-    setConversations([newChat, ...conversations]);
-    setActiveChat(newChat);
+  
+const handleNewChat = async () => {
+  const newChat = {
+    title: `New Chat ${conversations.length + 1}`,
+    messages: [],
+    createdAt: new Date()
   };
 
-  const handleChangeActiveChat = (chat) => {
+  if (user) {
+    const chatRef = await addDoc(collection(db, 'users', user.uid, 'chats'), newChat);
+    const newChatId = chatRef.id;
+    const newChatObj = { id: newChatId, title: newChat.title, messages: [] };
+    setConversations((prev) => [newChatObj, ...prev]);
+    setActiveChat(newChatObj);
+  } else {
+    const guestChat = { id: Date.now().toString(), title: newChat.title, messages: [] };
+    setConversations((prev) => [guestChat, ...prev]);
+    setActiveChat(guestChat);
+  }
+};
+
+const handleChangeActiveChat = (chat) => {
     setActiveChat(chat);
   };
 
-  const handleEditTitle = (id, newTitle) => {
-    const updatedConversations = conversations.map((chat) =>
-      chat.id === id ? { ...chat, title: newTitle } : chat
-    );
-    setConversations(updatedConversations);
-    if (activeChat.id === id) {
-      setActiveChat({ ...activeChat, title: newTitle });
-    }
-  };
+const handleEditTitle = async (chatId, newTitle) => {
+  setConversations((prev) =>
+    prev.map((chat) => (chat.id === chatId ? { ...chat, title: newTitle } : chat))
+  );
+
+  if (user) {
+    const chatDoc = doc(db, 'users', user.uid, 'chats', chatId.toString());
+    await updateDoc(chatDoc, { title: newTitle });
+  }
+};
+
+
 
   return (
     <>
