@@ -88,20 +88,28 @@ function App() {
   const [showSignOut, setShowSignOut] = useState(false); // Controls showing sign out option
 
 
-    // 🔹 Listen for authentication state changes
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
-      if (authUser) {
-        setUser(authUser);
-        setShowPopup(false);
-      } else {
-        setUser(null);
-        setConversations([]); // Clear chats on logout
+useEffect(() => {
+  if (user) {
+    // Listen for updates to the user's chats
+    const unsubscribe = onSnapshot(
+      query(collection(db, 'users', user.uid, 'chats'), orderBy('createdAt', 'desc')),
+      (snapshot) => {
+        const fetchedChats = snapshot.docs.map(doc => ({
+          id: doc.id,
+          title: doc.data().title,
+          createdAt: doc.data().createdAt,
+        }));
+        setConversations(fetchedChats);
       }
-    });
+    );
+    
+    return () => unsubscribe(); // Cleanup on unmount
+  } else {
+    setConversations([]);
+    setUser(null);
+  }
+}, [user]);
 
-    return () => unsubscribe(); // Cleanup listener
-  }, []);
 
 
 

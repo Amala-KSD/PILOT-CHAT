@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState , useEffect} from 'react';
 import styled from 'styled-components';
 import { BiSend, BiPaperclip } from 'react-icons/bi';
 import { getAuth, GoogleAuthProvider, signInWithPopup ,signOut } from 'firebase/auth'; // Import signOut from Firebase auth
 import logoKSD from './logoKSD.png';
 import { db } from '../Firebase';
-import {collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import {collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
 
 
 
@@ -234,6 +234,28 @@ const ChatArea = ({ activeChat, user, setUser, handleSignOut }) => {
   const [showSignOut, setShowSignOut] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false); // State to toggle sign-in button initially
   const [showSignInOptions, setShowSignInOptions] = useState(false); // Show sign-in options for guest users
+  const [messages, setMessages] = useState([]);
+
+
+    // Fetch messages from Firestore whenever the activeChat or user changes
+    useEffect(() => {
+      if (activeChat && user) {
+        const messagesRef = collection(db, "users", user.uid, "chats", activeChat.id.toString(), "messages");
+        const messagesQuery = query(messagesRef, orderBy('timestamp'));
+  
+        const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+          console.log("Messages fetched:", snapshot.docs);  
+          const fetchedMessages = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setMessages(fetchedMessages); // Set the messages to state
+        });
+  
+        // Cleanup on unmount or when the activeChat changes
+        return () => unsubscribe();
+      }
+    }, [activeChat, user]);
 
   const handleSend = async () => {
     if (newMessage.trim()) {
@@ -252,6 +274,13 @@ const ChatArea = ({ activeChat, user, setUser, handleSignOut }) => {
       // Add messages to UI state
       activeChat.messages.push(userMessage);
       activeChat.messages.push(botMessage);
+      // Add messages to UI state (for immediate display)
+      setMessages(prevMessages => [
+        ...prevMessages,
+        userMessage,
+        botMessage,
+      ]);
+      setNewMessage("");      
       setNewMessage("");
   
       // Store messages in Firestore if user is signed in
@@ -345,14 +374,14 @@ const ChatArea = ({ activeChat, user, setUser, handleSignOut }) => {
 
         <HeaderInfo>
           <h1>{activeChat.title}</h1>
-          <p>{activeChat.messages.length} messages</p>
+          <p>{messages.length} messages</p>
         </HeaderInfo>
 
         <Logo src={logoKSD} alt="Logo" />
       </Header>
 
       <MessagesArea>
-        {activeChat.messages.map(message => (
+        {(messages||[]).map(message => (
           <Message key={message.id} isUser={message.isUser}>
             {!message.isUser && <Avatar>G</Avatar>}
             <MessageContent isUser={message.isUser}>
