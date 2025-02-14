@@ -1,12 +1,25 @@
-import React, { useState , useEffect} from 'react';
-import styled from 'styled-components';
-import { BiSend, BiPaperclip } from 'react-icons/bi';
-import { getAuth, GoogleAuthProvider, signInWithPopup ,signOut } from 'firebase/auth'; // Import signOut from Firebase auth
-import logoKSD from './logoKSD.png';
-import { db } from '../Firebase';
-import {collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
-
-
+import React, { useState, useEffect } from "react";
+import styled from "styled-components";
+import { BiSend, BiPaperclip } from "react-icons/bi";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+} from "firebase/auth"; // Import signOut from Firebase auth
+import logoKSD from "./logoKSD.png";
+import { db } from "../Firebase";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  orderBy,
+  onSnapshot,
+  doc,
+  getDoc,
+  setDoc,
+} from "firebase/firestore";
 
 //current
 
@@ -15,7 +28,6 @@ const ChatContainer = styled.div`
   display: flex;
   flex-direction: column;
   background: #000000;
-  
 `;
 
 const Header = styled.div`
@@ -59,19 +71,34 @@ const SignInButton = styled.div`
 
 const SignOutButton = styled.div`
   position: absolute;
-  top: 12px; 
+  top: 12px;
   left: 50%;
-  transform: translateX(50%);
-  background: #444;
-  color: #fff;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 12px;
+  transform: translateX(-50%);
+  background: #d60303b5;
+  color: white;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: center;
   cursor: pointer;
+  box-shadow: 0px 4px 10px rgba(239, 68, 68, 0.5);
+  transition: all 0.3s ease-in-out;
   z-index: 10;
 
   &:hover {
-    background: #555;
+    background: #dc2626;
+    box-shadow: 0px 6px 12px rgba(220, 38, 38, 0.7);
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0px 0px 10px rgba(239, 68, 68, 0.8);
+  }
+
+  @media (max-width: 500px) {
+    top: 20px;
+    transition: all 0.3s ease-in-out;
   }
 `;
 
@@ -99,11 +126,11 @@ const Message = styled.div`
   display: flex;
   gap: 12px;
   max-width: 80%;
-  ${props => props.isUser && 'margin-left: auto;'}
+  ${(props) => props.isUser && "margin-left: auto;"}
 `;
 
 const MessageContent = styled.div`
-  background: ${props => props.isUser ? '#0084ff' : '#222'};
+  background: ${(props) => (props.isUser ? "#0084ff" : "#222")};
   padding: 12px 16px;
   border-radius: 12px;
   color: #ffffff;
@@ -161,9 +188,8 @@ const Logo = styled.img`
   @media (max-width: 500px) {
     height: 35px;
     width: auto;
-    margin-left: 55px;
+    margin-left: 50px;
   }
-
 `;
 const Overlay = styled.div`
   position: fixed;
@@ -211,8 +237,11 @@ const Button = styled.button`
 `;
 
 const GoogleButton = styled(Button)`
-  background: #4285F4;
+  background: #4285f4;
   color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
     background: #357ae8;
@@ -228,75 +257,83 @@ const GuestButton = styled(Button)`
   }
 `;
 
-
 const ChatArea = ({ activeChat, user, setUser, handleSignOut }) => {
-  const [newMessage, setNewMessage] = useState('');
+  const [newMessage, setNewMessage] = useState("");
   const [showSignOut, setShowSignOut] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false); // State to toggle sign-in button initially
   const [showSignInOptions, setShowSignInOptions] = useState(false); // Show sign-in options for guest users
   const [messages, setMessages] = useState([]);
 
+  // Fetch messages from Firestore whenever the activeChat or user changes
+  useEffect(() => {
+    if (activeChat && user) {
+      const messagesRef = collection(
+        db,
+        "users",
+        user.uid,
+        "chats",
+        activeChat.id.toString(),
+        "messages"
+      );
+      const messagesQuery = query(messagesRef, orderBy("timestamp"));
 
-    // Fetch messages from Firestore whenever the activeChat or user changes
-    useEffect(() => {
-      if (activeChat && user) {
-        const messagesRef = collection(db, "users", user.uid, "chats", activeChat.id.toString(), "messages");
-        const messagesQuery = query(messagesRef, orderBy('timestamp'));
-  
-        const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-          console.log("Messages fetched:", snapshot.docs);  
-          const fetchedMessages = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-          setMessages(fetchedMessages); // Set the messages to state
-        });
-  
-        // Cleanup on unmount or when the activeChat changes
-        return () => unsubscribe();
-      }
-    }, [activeChat, user]);
+      const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+        console.log("Messages fetched:", snapshot.docs);
+        const fetchedMessages = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setMessages(fetchedMessages); // Set the messages to state
+      });
+
+      // Cleanup on unmount or when the activeChat changes
+      return () => unsubscribe();
+    }
+  }, [activeChat, user]);
 
   const handleSend = async () => {
     if (newMessage.trim()) {
-      const userMessage = { 
-        id: Date.now(), 
-        text: newMessage, 
-        isUser: true 
+      const userMessage = {
+        id: Date.now(),
+        text: newMessage,
+        isUser: true,
       };
-  
-      const botMessage = { 
-        id: Date.now() + 1, 
-        text: "hi", 
-        isUser: false 
+
+      const botMessage = {
+        id: Date.now() + 1,
+        text: "hi",
+        isUser: false,
       };
-  
+
       // Add messages to UI state
       activeChat.messages.push(userMessage);
       activeChat.messages.push(botMessage);
       // Add messages to UI state (for immediate display)
-      setMessages(prevMessages => [
-        ...prevMessages,
-        userMessage,
-        botMessage,
-      ]);
-      setNewMessage("");      
+      setMessages((prevMessages) => [...prevMessages, userMessage, botMessage]);
       setNewMessage("");
-  
+      setNewMessage("");
+
       // Store messages in Firestore if user is signed in
       if (user) {
         try {
-          const chatRef = collection(db, "users", user.uid, "chats",activeChat.id.toString(), "messages");
+          const chatRef = collection(
+            db,
+            "users",
+            user.uid,
+            "chats",
+            activeChat.id.toString(),
+            "messages"
+          );
           await addDoc(chatRef, {
             text: newMessage,
             isUser: true,
-            timestamp: serverTimestamp()
+            timestamp: serverTimestamp(),
           });
-  
+
           await addDoc(chatRef, {
             text: "hi",
             isUser: false,
-            timestamp: serverTimestamp()
+            timestamp: serverTimestamp(),
           });
         } catch (error) {
           console.error("Error sending message:", error);
@@ -304,11 +341,10 @@ const ChatArea = ({ activeChat, user, setUser, handleSignOut }) => {
       }
     }
   };
-  
 
   const handleAvatarClick = () => {
     if (user) {
-      setShowSignOut(prevState => !prevState); // Toggle sign-out button visibility
+      setShowSignOut((prevState) => !prevState); // Toggle sign-out button visibility
     } else {
       setShowSignInOptions(true); // Show sign-in options if the user is a guest
     }
@@ -328,8 +364,14 @@ const ChatArea = ({ activeChat, user, setUser, handleSignOut }) => {
     try {
       const result = await signInWithPopup(auth, provider);
       // Update user info with Google data
+
       setUser(result.user);
       setShowSignInOptions(false); // Close popup after Google sign-in
+
+      console.log(
+        "Google successfull photourl inside chatarea:",
+        result.user.photoURL
+      );
     } catch (error) {
       console.error("Google Sign-In Error:", error);
     }
@@ -340,30 +382,81 @@ const ChatArea = ({ activeChat, user, setUser, handleSignOut }) => {
     setShowSignInOptions(false); // Close popup after choosing guest login
   };
 
-
   return (
     <ChatContainer>
       <Header>
         {/* Display profile picture if user is logged in, else show 'G' for guest */}
         <Avatar onClick={handleAvatarClick}>
           {user ? (
-            <img src={user.photoURL} alt="Profile" style={{ width: '100%', borderRadius: '50%' }} />
+            <img
+              src={user.photoURL}
+              alt="Profile"
+              style={{ width: "100%", borderRadius: "50%" }}
+              crossOrigin="anonymous"
+            />
           ) : (
-            'G'
+            "G"
           )}
         </Avatar>
+        {console.log("img src:", user?.photoURL)}
 
         {/* Show Sign-In button if the user is a guest */}
         {showSignInOptions && !user && (
           <Overlay>
-          <Popup>
-            <PopupTitle>Sign In</PopupTitle>
-            <PopupText>Choose your sign-in method:</PopupText>
-            <GoogleButton onClick={handleGoogleSignIn}>Sign in with Google</GoogleButton>
-            <GuestButton onClick={handleGuestLogin}>Continue as Guest</GuestButton>
-          </Popup>
-        </Overlay>
-      )}
+            <Popup>
+              <PopupTitle>Sign In</PopupTitle>
+              <PopupText>Choose your sign-in method:</PopupText>
+              <GoogleButton onClick={handleGoogleSignIn}>
+                <svg
+                  style={{
+                    width: "16px",
+                    height: "16px",
+                    marginRight: "8px",
+                  }}
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  viewBox="0 0 18 19"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.842 18.083a8.8 8.8 0 0 1-8.65-8.948 8.841 8.841 0 0 1 8.8-8.652h.153a8.464 8.464 0 0 1 5.7 2.257l-2.193 2.038A5.27 5.27 0 0 0 9.09 3.4a5.882 5.882 0 0 0-.2 11.76h.124a5.091 5.091 0 0 0 5.248-4.057L14.3 11H9V8h8.34c.066.543.095 1.09.088 1.636-.086 5.053-3.463 8.449-8.4 8.449l-.186-.002Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Sign in with Google
+              </GoogleButton>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginBottom: "12px",
+                }}
+              >
+                <hr
+                  style={{
+                    height: "0",
+                    borderBottom: "1px solid #6B7280",
+                    flexGrow: 1,
+                  }}
+                />
+                <p style={{ margin: "0 15px", color: "#6B7280" }}>or</p>
+                <hr
+                  style={{
+                    height: "0",
+                    borderBottom: "1px solid #6B7280",
+                    flexGrow: 1,
+                  }}
+                />
+              </div>
+
+              <GuestButton onClick={handleGuestLogin}>
+                Continue as Guest
+              </GuestButton>
+            </Popup>
+          </Overlay>
+        )}
 
         {/* Show the sign-out button if avatar is clicked and the user is signed in */}
         {showSignOut && user && (
@@ -381,7 +474,7 @@ const ChatArea = ({ activeChat, user, setUser, handleSignOut }) => {
       </Header>
 
       <MessagesArea>
-        {(messages||[]).map(message => (
+        {(messages || []).map((message) => (
           <Message key={message.id} isUser={message.isUser}>
             {!message.isUser && <Avatar>G</Avatar>}
             <MessageContent isUser={message.isUser}>
@@ -400,7 +493,7 @@ const ChatArea = ({ activeChat, user, setUser, handleSignOut }) => {
           placeholder="Type a new message here"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+          onKeyPress={(e) => e.key === "Enter" && handleSend()}
         />
         <IconButton onClick={handleSend}>
           <BiSend />

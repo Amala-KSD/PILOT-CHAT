@@ -1,10 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
-import Sidebar from './components/Sidebar';
-import ChatArea from './components/ChatArea';
-import { db } from './Firebase';
-import { auth, googleProvider, signInWithPopup, signInAnonymously, signOut } from './Firebase';
-import { collection, query, orderBy, onSnapshot, addDoc, doc, updateDoc } from "firebase/firestore";
+import React, { useState, useEffect } from "react";
+import styled from "styled-components";
+import Sidebar from "./components/Sidebar";
+import ChatArea from "./components/ChatArea";
+import { db } from "./Firebase";
+import {
+  auth,
+  googleProvider,
+  signInWithPopup,
+  signInAnonymously,
+  signOut,
+} from "./Firebase";
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  doc,
+  updateDoc,
+} from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
 const AppContainer = styled.div`
@@ -61,8 +75,11 @@ const Button = styled.button`
 `;
 
 const GoogleButton = styled(Button)`
-  background: #4285F4;
+  background: #4285f4;
   color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
     background: #357ae8;
@@ -80,38 +97,41 @@ const GuestButton = styled(Button)`
 
 function App() {
   const [conversations, setConversations] = useState([
-    { id: 1, title: 'First Conversation', messages: [{ id: 1, text: 'Hello!', isUser: false }] }
+    {
+      id: 1,
+      title: "First Conversation",
+      messages: [{ id: 1, text: "Hello!", isUser: false }],
+    },
   ]);
   const [activeChat, setActiveChat] = useState(conversations[0]);
   const [showPopup, setShowPopup] = useState(true); // Controls popup visibility
   const [user, setUser] = useState(null); // Store logged-in user
   const [showSignOut, setShowSignOut] = useState(false); // Controls showing sign out option
 
+  useEffect(() => {
+    if (user) {
+      // Listen for updates to the user's chats
+      const unsubscribe = onSnapshot(
+        query(
+          collection(db, "users", user.uid, "chats"),
+          orderBy("createdAt", "desc")
+        ),
+        (snapshot) => {
+          const fetchedChats = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            title: doc.data().title,
+            createdAt: doc.data().createdAt,
+          }));
+          setConversations(fetchedChats);
+        }
+      );
 
-useEffect(() => {
-  if (user) {
-    // Listen for updates to the user's chats
-    const unsubscribe = onSnapshot(
-      query(collection(db, 'users', user.uid, 'chats'), orderBy('createdAt', 'desc')),
-      (snapshot) => {
-        const fetchedChats = snapshot.docs.map(doc => ({
-          id: doc.id,
-          title: doc.data().title,
-          createdAt: doc.data().createdAt,
-        }));
-        setConversations(fetchedChats);
-      }
-    );
-    
-    return () => unsubscribe(); // Cleanup on unmount
-  } else {
-    setConversations([]);
-    setUser(null);
-  }
-}, [user]);
-
-
-
+      return () => unsubscribe(); // Cleanup on unmount
+    } else {
+      setConversations([]);
+      setUser(null);
+    }
+  }, [user]);
 
   // Handle Google Sign-In
   const handleGoogleSignIn = async () => {
@@ -120,6 +140,7 @@ useEffect(() => {
       setUser(result.user);
       setShowPopup(false); // Close popup after login
       console.log("Sign in with Google successful");
+      console.log("Google successfull photourl:", result.user.photoURL);
     } catch (error) {
       console.error("Google Sign-In Error:", error);
     }
@@ -148,43 +169,49 @@ useEffect(() => {
     }
   };
 
-  
-const handleNewChat = async () => {
-  const newChat = {
-    title: `New Chat ${conversations.length + 1}`,
-    messages: [],
-    createdAt: new Date()
+  const handleNewChat = async () => {
+    const newChat = {
+      title: `New Chat ${conversations.length + 1}`,
+      messages: [],
+      createdAt: new Date(),
+    };
+
+    if (user) {
+      const chatRef = await addDoc(
+        collection(db, "users", user.uid, "chats"),
+        newChat
+      );
+      const newChatId = chatRef.id;
+      const newChatObj = { id: newChatId, title: newChat.title, messages: [] };
+      setConversations((prev) => [newChatObj, ...prev]);
+      setActiveChat(newChatObj);
+    } else {
+      const guestChat = {
+        id: Date.now().toString(),
+        title: newChat.title,
+        messages: [],
+      };
+      setConversations((prev) => [guestChat, ...prev]);
+      setActiveChat(guestChat);
+    }
   };
 
-  if (user) {
-    const chatRef = await addDoc(collection(db, 'users', user.uid, 'chats'), newChat);
-    const newChatId = chatRef.id;
-    const newChatObj = { id: newChatId, title: newChat.title, messages: [] };
-    setConversations((prev) => [newChatObj, ...prev]);
-    setActiveChat(newChatObj);
-  } else {
-    const guestChat = { id: Date.now().toString(), title: newChat.title, messages: [] };
-    setConversations((prev) => [guestChat, ...prev]);
-    setActiveChat(guestChat);
-  }
-};
-
-const handleChangeActiveChat = (chat) => {
+  const handleChangeActiveChat = (chat) => {
     setActiveChat(chat);
   };
 
-const handleEditTitle = async (chatId, newTitle) => {
-  setConversations((prev) =>
-    prev.map((chat) => (chat.id === chatId ? { ...chat, title: newTitle } : chat))
-  );
+  const handleEditTitle = async (chatId, newTitle) => {
+    setConversations((prev) =>
+      prev.map((chat) =>
+        chat.id === chatId ? { ...chat, title: newTitle } : chat
+      )
+    );
 
-  if (user) {
-    const chatDoc = doc(db, 'users', user.uid, 'chats', chatId.toString());
-    await updateDoc(chatDoc, { title: newTitle });
-  }
-};
-
-
+    if (user) {
+      const chatDoc = doc(db, "users", user.uid, "chats", chatId.toString());
+      await updateDoc(chatDoc, { title: newTitle });
+    }
+  };
 
   return (
     <>
@@ -193,10 +220,57 @@ const handleEditTitle = async (chatId, newTitle) => {
           <Popup>
             <PopupTitle>Disclaimer</PopupTitle>
             <PopupText>
-              This product belongs to KSDAdvisory, and the models used might produce inaccurate information.
+              This product belongs to KSDAdvisory, and the models used might
+              produce inaccurate information.
             </PopupText>
-            <GoogleButton onClick={handleGoogleSignIn}>Sign in with Google</GoogleButton>
-            <GuestButton onClick={handleGuestLogin}>Sign in as Guest for now</GuestButton>
+            <GoogleButton onClick={handleGoogleSignIn}>
+              <svg
+                style={{
+                  width: "16px",
+                  height: "16px",
+                  marginRight: "8px",
+                }}
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="currentColor"
+                viewBox="0 0 18 19"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.842 18.083a8.8 8.8 0 0 1-8.65-8.948 8.841 8.841 0 0 1 8.8-8.652h.153a8.464 8.464 0 0 1 5.7 2.257l-2.193 2.038A5.27 5.27 0 0 0 9.09 3.4a5.882 5.882 0 0 0-.2 11.76h.124a5.091 5.091 0 0 0 5.248-4.057L14.3 11H9V8h8.34c.066.543.095 1.09.088 1.636-.086 5.053-3.463 8.449-8.4 8.449l-.186-.002Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              Sign in with Google
+            </GoogleButton>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginBottom: "12px",
+              }}
+            >
+              <hr
+                style={{
+                  height: "0",
+                  borderBottom: "1px solid #6B7280",
+                  flexGrow: 1,
+                }}
+              />
+              <p style={{ margin: "0 15px", color: "#6B7280" }}>or</p>
+              <hr
+                style={{
+                  height: "0",
+                  borderBottom: "1px solid #6B7280",
+                  flexGrow: 1,
+                }}
+              />
+            </div>
+
+            <GuestButton onClick={handleGuestLogin}>
+              Sign in as Guest for now
+            </GuestButton>
           </Popup>
         </Overlay>
       )}
@@ -208,7 +282,14 @@ const handleEditTitle = async (chatId, newTitle) => {
           handleChangeActiveChat={handleChangeActiveChat}
           handleEditTitle={handleEditTitle}
         />
-        <ChatArea activeChat={activeChat} user={user} setUser={setUser} handleSignOut={handleSignOut} showSignOut={showSignOut} setShowSignOut={setShowSignOut}  />
+        <ChatArea
+          activeChat={activeChat}
+          user={user}
+          setUser={setUser}
+          handleSignOut={handleSignOut}
+          showSignOut={showSignOut}
+          setShowSignOut={setShowSignOut}
+        />
       </AppContainer>
     </>
   );
